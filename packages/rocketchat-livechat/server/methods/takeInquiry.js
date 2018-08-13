@@ -24,7 +24,8 @@ Meteor.methods({
 			alert: true,
 			open: true,
 			unread: 1,
-			code: inquiry.code,
+			userMentions: 1,
+			groupMentions: 0,
 			u: {
 				_id: agent.agentId,
 				username: agent.username
@@ -34,7 +35,9 @@ Meteor.methods({
 			mobilePushNotifications: 'all',
 			emailNotifications: 'all'
 		};
+
 		RocketChat.models.Subscriptions.insert(subscriptionData);
+		RocketChat.models.Rooms.incUsersCountById(inquiry.rid);
 
 		// update room
 		const room = RocketChat.models.Rooms.findOneById(inquiry.rid);
@@ -59,7 +62,7 @@ Meteor.methods({
 			data: RocketChat.models.Users.getAgentInfo(agent.agentId)
 		});
 
-		// return room corresponding to inquiry (for redirecting agent to the room route)
-		return room;
+		// return inquiry (for redirecting agent to the room route)
+		return inquiry;
 	}
 });

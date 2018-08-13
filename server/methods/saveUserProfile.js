@@ -1,6 +1,7 @@
 Meteor.methods({
 	saveUserProfile(settings, customFields) {
 		check(settings, Object);
+		check(customFields, Match.Maybe(Object));
 
 		if (!RocketChat.settings.get('Accounts_AllowUserProfileChange')) {
 			throw new Meteor.Error('error-not-allowed', 'Not allowed', {
@@ -33,7 +34,9 @@ Meteor.methods({
 		}
 
 		if (settings.realname) {
-			RocketChat.setRealName(Meteor.userId(), settings.realname);
+			if (!RocketChat.setRealName(Meteor.userId(), settings.realname)) {
+				throw new Meteor.Error('error-could-not-change-name', 'Could not change name', { method: 'saveUserProfile' });
+			}
 		}
 
 		if (settings.username) {
@@ -50,13 +53,15 @@ Meteor.methods({
 			Meteor.call('setEmail', settings.email);
 		}
 
-		// Should be the last chack to prevent error when trying to check password for users without password
+		// Should be the last check to prevent error when trying to check password for users without password
 		if ((settings.newPassword) && RocketChat.settings.get('Accounts_AllowPasswordChange') === true) {
 			if (!checkPassword(user, settings.typedPassword)) {
 				throw new Meteor.Error('error-invalid-password', 'Invalid password', {
 					method: 'saveUserProfile'
 				});
 			}
+
+			RocketChat.passwordPolicy.validate(settings.newPassword);
 
 			Accounts.setPassword(Meteor.userId(), settings.newPassword, {
 				logout: false
@@ -65,7 +70,9 @@ Meteor.methods({
 
 		RocketChat.models.Users.setProfile(Meteor.userId(), {});
 
-		RocketChat.saveCustomFields(Meteor.userId(), customFields);
+		if (customFields && Object.keys(customFields).length) {
+			RocketChat.saveCustomFields(Meteor.userId(), customFields);
+		}
 
 		return true;
 	}

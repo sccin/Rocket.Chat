@@ -5,17 +5,19 @@ Meteor.methods({
 				method: 'starMessage'
 			});
 		}
+
 		if (!RocketChat.settings.get('Message_AllowStarring')) {
 			throw new Meteor.Error('error-action-not-allowed', 'Message starring not allowed', {
 				method: 'pinMessage',
 				action: 'Message_starring'
 			});
 		}
-		const room = RocketChat.models.Rooms.findOneById(message.rid);
-		if (Array.isArray(room.usernames) && room.usernames.indexOf(Meteor.user().username) === -1) {
+
+		const subscription = RocketChat.models.Subscriptions.findOneByRoomIdAndUserId(message.rid, Meteor.userId(), { fields: { _id: 1 } });
+		if (!subscription) {
 			return false;
 		}
+
 		return RocketChat.models.Messages.updateUserStarById(message._id, Meteor.userId(), message.starred);
 	}
 });
-
